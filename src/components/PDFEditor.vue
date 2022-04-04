@@ -1,21 +1,79 @@
 <template>
-  <div class="row h-100 no-gutters">
-    <div class="col-md-3 col-xl-2 h-100 border-right p-2">
-      <b-form-group label="Choisir un PDF :">
-        <b-form-file v-model="pdfList" multiple accept=".pdf"></b-form-file>
+  <div class="row h-100 no-gutters bg-white">
+    <div
+      id="left-pane"
+      class="col-auto h-100 border-right pl-2 pt-2 pr-2 scroll-container"
+    >
+      <div class="font-weight-bold border-bottom mb-3">
+        <font-awesome-icon :icon="faFilePdf" />
+        Choisir un/des PDF
+      </div>
+      <b-form-group>
+        <b-form-file
+          v-model="fileList"
+          multiple
+          accept=".pdf"
+          browse-text="Choisir"
+        />
       </b-form-group>
-      <b-button-group>
-        <b-button :disabled="index <= 0" @click="index -= 1">-</b-button>
-        <b-button disabled>{{ index + 1 }}</b-button>
-        <b-button :disabled="index >= pdfList.length - 1" @click="index += 1">
+      <b-button-group class="w-100">
+        <b-button
+          class="flex-grow-0"
+          :disabled="index <= 0"
+          @click="index -= 1"
+        >
+          -
+        </b-button>
+        <b-button class="flex-grow-1" disabled>{{ index + 1 }}</b-button>
+        <b-button
+          class="flex-grow-0"
+          :disabled="index >= fileList.length - 1"
+          @click="index += 1"
+        >
           +
         </b-button>
       </b-button-group>
+      <div id="mask-list" class="scroll-content scroll-container">
+        <div class="d-flex border-bottom mt-4 sticky-top font-weight-bold">
+          <div>
+            <font-awesome-icon :icon="faDrawSquare" />
+            Masques
+          </div>
+          <a href="#" class="ml-auto" @click.prevent="addMask">
+            <font-awesome-icon :icon="faPlusCircle" size="lg" />
+          </a>
+        </div>
+        <div class="scroll-content border-bottom">
+          <template v-if="masks.length > 0">
+            <div class="mt-3">
+              <MaskConfigurator
+                class="mb-2"
+                v-for="(mask, index) in masks"
+                :key="mask.id"
+                :config.sync="masks[index]"
+                :documents="pdfDocList"
+                @delete="removeMask"
+              />
+            </div>
+          </template>
+          <template v-else>
+            <div class="text-center text-muted">
+              <small>Aucun masque</small>
+            </div>
+          </template>
+        </div>
+      </div>
+      <div class="py-2">
+        <b-button variant="primary" block @click="save">
+          <font-awesome-icon :icon="faFloppyDisk" swap-opacity />
+          Enregistrer
+        </b-button>
+      </div>
     </div>
-    <div class="col">
-      <div class="h-100" v-for="pdf in pdfList" :key="pdf.name">
-        <template v-if="pdfList.length > 0">
-          <iframe id="pdf" :src="lastData"></iframe>
+    <div id="preview" class="col h-100">
+      <div class="h-100" v-for="pdf in fileList" :key="pdf.name">
+        <template v-if="fileList.length > 0">
+          <iframe id="pdf" :src="preview"></iframe>
         </template>
       </div>
     </div>
@@ -25,8 +83,18 @@
 <script lang="ts">
 import { Component, Vue, Watch } from "vue-property-decorator";
 import { BFormFile, BFormGroup, BButtonGroup, BButton } from "bootstrap-vue";
-import { pdfToObjectUrl } from "@/utils/file";
-import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { fileToPdf, getEditedPdfList } from "@/utils/pdf";
+import { PDFDocument, rgb } from "pdf-lib";
+import { mask } from "@/types/mask";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import {
+  faDrawSquare,
+  faFilePdf,
+  faFloppyDisk,
+  faPlusCircle,
+} from "@fortawesome/pro-duotone-svg-icons";
+import MaskConfigurator from "./MaskConfigurator.vue";
+import { dialog, getCurrentWindow } from "@electron/remote";
 
 @Component({
   components: {
@@ -34,54 +102,104 @@ import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
     BButtonGroup,
     BFormFile,
     BFormGroup,
+    FontAwesomeIcon,
+    MaskConfigurator,
   },
 })
 export default class PDFEditor extends Vue {
-  pdfList: File[] = [];
+  fileList: File[] = [];
   index = 0;
-  lastData = "";
+  preview = "";
+  masks: mask[] = [];
+  counter = 0;
+  pdfDocList: PDFDocument[] = [];
+  previewPdfDocList: PDFDocument[] = [];
 
-  get uri(): string {
-    return pdfToObjectUrl(this.pdfList[this.index]);
+  faDrawSquare = faDrawSquare;
+  faFilePdf = faFilePdf;
+  faFloppyDisk = faFloppyDisk;
+  faPlusCircle = faPlusCircle;
+
+  async updatePreview(): Promise<void> {
+    // Update lists, preview included
+    this.pdfDocList = await this.getPdfList(this.fileList);
+    this.previewPdfDocList = await this.getEditedPdfPreviewList(
+      this.pdfDocList
+    );
+
+    // Create preview data URI
+    if (this.previewPdfDocList.length > 0) {
+      const pdfDoc = this.previewPdfDocList[this.index];
+      this.preview = await pdfDoc.saveAsBase64({ dataUri: true });
+    }
   }
 
-  async listChanged(): Promise<string | void> {
-    const buffer = await this.pdfList[this.index].arrayBuffer();
-    const pdfDoc = await PDFDocument.load(buffer);
-
-    // Embed the Helvetica font
-    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    // Get the first page of the document
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-
-    // Get the width and height of the first page
-    const { width, height } = firstPage.getSize();
-
-    // Draw a string of text diagonally across the first page
-    firstPage.drawRectangle({
-      x: 200,
-      y: height / 2 + 300,
+  addMask(): void {
+    const mask: mask = {
+      id: `${(this.counter += 1)}`,
       color: rgb(1, 1, 1),
-    });
-
-    return (this.lastData = await pdfDoc.saveAsBase64({ dataUri: true }));
+      height: 50,
+      width: 100,
+      x: 10,
+      y: 100,
+      documents: [],
+    };
+    this.masks.push(mask);
   }
 
-  @Watch("uri", { immediate: true })
-  onUriChanged(): void {
-    this.listChanged();
+  removeMask(id: string): void {
+    const index = this.masks.findIndex((mask) => mask.id === id);
+    this.masks.splice(index, 1);
+  }
+
+  async getPdfList(files: File[]): Promise<PDFDocument[]> {
+    const pdfList: PDFDocument[] = [];
+
+    // For each file, convert it to a PDF document
+    for (let i = 0; i < files.length; i += 1) {
+      pdfList.push(await fileToPdf(files[i]));
+    }
+
+    return pdfList;
+  }
+
+  async getEditedPdfPreviewList(
+    pdfDocuments: PDFDocument[]
+  ): Promise<PDFDocument[]> {
+    return await getEditedPdfList(pdfDocuments, this.masks, true);
+  }
+
+  async save(): Promise<void> {
+    const dialogResult = await dialog.showSaveDialog(getCurrentWindow(), {});
+
+    if (!dialogResult.canceled) {
+      const pdfToSave = await getEditedPdfList(this.pdfDocList, this.masks);
+
+      for (let i = 0; i < pdfToSave.length; i += 1) {
+        const pdf = pdfToSave[i];
+        const path = `${dialogResult.filePath}/${pdf.getTitle()}.pdf`;
+        const data = await pdf.save();
+
+        // fs.writeFile(path, data, (err) => {
+        //   alert(err?.message);
+        // });
+      }
+    }
   }
 
   @Watch("index", { immediate: true })
   onIndexChanged(): void {
-    this.listChanged();
+    this.updatePreview();
   }
 
-  @Watch("pdfList", { immediate: true })
-  onListChanged(): void {
-    this.listChanged();
+  @Watch("fileList", { immediate: true, deep: true })
+  onFileListChanged(): void {
+    this.updatePreview();
+  }
+
+  @Watch("masks", { immediate: true, deep: true })
+  onMasksChanged(): void {
+    this.updatePreview();
   }
 }
 </script>
@@ -91,5 +209,27 @@ iframe {
   height: 100%;
   width: 100%;
   border: none;
+}
+
+#left-pane {
+  width: 17rem;
+  max-height: 100vh !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#preview {
+  background-color: #414447;
+}
+
+.scroll-content {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.scroll-container {
+  display: flex;
+  flex-direction: column;
 }
 </style>
