@@ -1,8 +1,19 @@
 "use strict";
 
-import { app, protocol, BrowserWindow } from "electron";
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  ipcMain,
+  IpcMainInvokeEvent,
+  dialog,
+} from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
+import { PDFDocument } from "pdf-lib";
+import fs from "fs";
+import path from "path";
+
 const isDevelopment = process.env.NODE_ENV !== "production";
 
 // Scheme must be registered before the app is ready
@@ -79,3 +90,31 @@ if (isDevelopment) {
     });
   }
 }
+
+async function savePdfList(
+  event: IpcMainInvokeEvent,
+  documents: string[]
+): Promise<void> {
+  const window = BrowserWindow.fromId(event.sender.id) as BrowserWindow;
+  const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+    properties: ["openDirectory", "createDirectory"],
+  });
+
+  if (!canceled && filePaths.length === 1) {
+    for (let i = 0; i < documents.length; i += 1) {
+      const pdf = await PDFDocument.load(documents[i]);
+      const fullPath = path.join(filePaths[0], pdf.getTitle() as string);
+
+      fs.writeFile(fullPath, await pdf.save(), () => {
+        // err = err as NodeJS.ErrnoException;
+        // dialog.showErrorBox(err.name, err.message);
+      });
+    }
+
+    dialog.showMessageBox(window, {
+      message: "Tous les fichiers ont bien été enregistrés.",
+    });
+  }
+}
+
+ipcMain.handle("dialog:save", savePdfList);

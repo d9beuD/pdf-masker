@@ -94,7 +94,7 @@ import {
   faPlusCircle,
 } from "@fortawesome/pro-duotone-svg-icons";
 import MaskConfigurator from "./MaskConfigurator.vue";
-import { dialog, getCurrentWindow } from "@electron/remote";
+import { ipcRenderer } from "electron";
 
 @Component({
   components: {
@@ -170,21 +170,18 @@ export default class PDFEditor extends Vue {
   }
 
   async save(): Promise<void> {
-    const dialogResult = await dialog.showSaveDialog(getCurrentWindow(), {});
+    const documents = await getEditedPdfList(
+      this.pdfDocList,
+      this.masks,
+      false
+    );
+    const base64Documents: string[] = [];
 
-    if (!dialogResult.canceled) {
-      const pdfToSave = await getEditedPdfList(this.pdfDocList, this.masks);
-
-      for (let i = 0; i < pdfToSave.length; i += 1) {
-        const pdf = pdfToSave[i];
-        const path = `${dialogResult.filePath}/${pdf.getTitle()}.pdf`;
-        const data = await pdf.save();
-
-        // fs.writeFile(path, data, (err) => {
-        //   alert(err?.message);
-        // });
-      }
+    for (let i = 0; i < documents.length; i += 1) {
+      base64Documents.push(await documents[i].saveAsBase64());
     }
+
+    ipcRenderer.invoke("dialog:save", base64Documents);
   }
 
   @Watch("index", { immediate: true })
