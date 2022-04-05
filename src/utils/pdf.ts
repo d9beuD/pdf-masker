@@ -20,18 +20,17 @@ export async function getEditedPdf(
   for (let i = 0; i < masks.length; i += 1) {
     const mask = masks[i];
 
-    if (isPreview) {
-      // add some style to better visualize the mask
-      Object.assign(mask, {
-        borderColor: rgb(1, 0, 0),
-        borderWidth: 1,
-        opacity: 0.8,
-      } as mask);
-    }
-
     pdf.getPages().forEach((page) => {
       // Apply masks
-      page.drawRectangle(mask);
+      page.drawRectangle(
+        isPreview
+          ? Object.assign({}, mask, {
+              borderColor: rgb(1, 0, 0),
+              borderWidth: 1,
+              opacity: 0.8,
+            } as mask)
+          : mask
+      );
     });
   }
 
