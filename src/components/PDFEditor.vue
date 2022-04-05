@@ -139,9 +139,9 @@ export default class PDFEditor extends Vue {
       id: `${(this.counter += 1)}`,
       color: rgb(1, 1, 1),
       height: 50,
-      width: 100,
-      x: 10,
-      y: 100,
+      width: 170,
+      x: 300,
+      y: 635,
       documents: [],
     };
     this.masks.push(mask);
