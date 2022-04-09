@@ -1,6 +1,10 @@
 {
   "name": "pdf-masker",
-  "version": "0.1.0",
+  "author": {
+    "name": "Vincent Bathelier"
+  },
+  "description": "A simple PDF masker",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
