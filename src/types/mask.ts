@@ -1,4 +1,4 @@
-import { PDFDocument, PDFPage, PDFPageDrawRectangleOptions } from "pdf-lib";
+import { PDFPageDrawRectangleOptions } from "pdf-lib";
 
 export interface mask extends PDFPageDrawRectangleOptions {
   documents: documentToApplyMasksTo[];
@@ -7,11 +7,9 @@ export interface mask extends PDFPageDrawRectangleOptions {
 
 export interface configurable {
   applyMask: boolean;
-  name?: string;
+  name: string;
 }
 
-export interface documentToApplyMasksTo extends configurable, PDFDocument {
-  pages: pageToApplyMasksTo[];
+export interface documentToApplyMasksTo extends configurable {
+  pages: configurable[];
 }
-
-export interface pageToApplyMasksTo extends configurable, PDFPage {}
