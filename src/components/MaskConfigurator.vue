@@ -114,14 +114,19 @@ export default class MaskConfigurator extends Vue {
     return uid() + "page-selector-modal";
   }
 
-      // Add the configured document
-      this.syncedConfig.documents.push(
-        Object.assign(pdf, {
-          pages: pages,
-          name: `${i + 1}`,
-        } as documentToApplyMasksTo)
-      );
-    }
+  async initConfigDocuments(): Promise<void> {
+    this.syncedConfig.documents = this.documents.map((document) => {
+      return {
+        applyMask: true,
+        name: document.getTitle() as string,
+        pages: document.getPages().map((page, index) => {
+          return {
+            name: `Page ${index + 1}`,
+            applyMask: true,
+          };
+        }),
+      };
+    });
   }
 
   async created(): Promise<void> {

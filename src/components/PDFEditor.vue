@@ -122,7 +122,6 @@ export default class PDFEditor extends Vue {
 
   async updatePreview(): Promise<void> {
     // Update lists, preview included
-    this.pdfDocList = await this.getPdfList(this.fileList);
     this.previewPdfDocList = await this.getEditedPdfPreviewList(
       this.pdfDocList
     );
@@ -190,7 +189,8 @@ export default class PDFEditor extends Vue {
   }
 
   @Watch("fileList", { immediate: true, deep: true })
-  onFileListChanged(): void {
+  async onFileListChanged(): Promise<void> {
+    this.pdfDocList = await this.getPdfList(this.fileList);
     this.updatePreview();
   }
 
