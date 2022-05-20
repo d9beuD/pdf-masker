@@ -95,6 +95,7 @@ import {
 } from "@fortawesome/pro-duotone-svg-icons";
 import MaskConfigurator from "./MaskConfigurator.vue";
 import { ipcRenderer } from "electron";
+import { mapMutations, mapState } from "vuex";
 
 @Component({
   components: {
@@ -105,20 +106,31 @@ import { ipcRenderer } from "electron";
     FontAwesomeIcon,
     MaskConfigurator,
   },
+  computed: { ...mapState({ maskList: "masks" }) },
+  methods: { ...mapMutations(["updateMaskList"]) },
 })
 export default class PDFEditor extends Vue {
   fileList: File[] = [];
   index = 0;
   preview = "";
-  masks: mask[] = [];
   counter = 0;
   pdfDocList: PDFDocument[] = [];
   previewPdfDocList: PDFDocument[] = [];
+  maskList!: mask[];
+  updateMaskList!: (masks: mask[]) => void;
 
   faDrawSquare = faDrawSquare;
   faFilePdf = faFilePdf;
   faFloppyDisk = faFloppyDisk;
   faPlusCircle = faPlusCircle;
+
+  get masks(): mask[] {
+    return this.maskList;
+  }
+
+  set masks(masks: mask[]) {
+    this.updateMaskList(masks);
+  }
 
   async updatePreview(): Promise<void> {
     // Update lists, preview included
@@ -143,12 +155,17 @@ export default class PDFEditor extends Vue {
       y: 635,
       documents: [],
     };
+
     this.masks.push(mask);
+    // eslint-disable-next-line no-self-assign
+    this.masks = this.masks;
   }
 
   removeMask(id: string): void {
     const index = this.masks.findIndex((mask) => mask.id === id);
     this.masks.splice(index, 1);
+    // eslint-disable-next-line no-self-assign
+    this.masks = this.masks;
   }
 
   async getPdfList(files: File[]): Promise<PDFDocument[]> {
@@ -183,6 +200,13 @@ export default class PDFEditor extends Vue {
     ipcRenderer.invoke("dialog:save", base64Documents);
   }
 
+  mounted(): void {
+    this.counter = Math.max(
+      0,
+      ...this.maskList.map((mask) => Number.parseInt(mask.id))
+    );
+  }
+
   @Watch("index", { immediate: true })
   onIndexChanged(): void {
     this.updatePreview();
@@ -197,6 +221,8 @@ export default class PDFEditor extends Vue {
   @Watch("masks", { immediate: true, deep: true })
   onMasksChanged(): void {
     this.updatePreview();
+    // eslint-disable-next-line no-self-assign
+    this.masks = this.masks;
   }
 }
 </script>
