@@ -3,7 +3,7 @@
     <b-form-checkbox v-model="syncedDocument.applyMask">
       {{ syncedDocument.name }}
     </b-form-checkbox>
-    <div>
+    <div class="pl-4">
       <ModalPageSelector
         v-for="(page, index) in syncedDocument.pages"
         :key="page.name"
@@ -25,19 +25,31 @@ export default class ModalDocumentSelector extends Vue {
   @PropSync("document", { type: Object, required: true })
   syncedDocument!: documentToApplyMasksTo;
 
-  onPageUpdated(): void {
-    //
+  get atLeastOneChecked(): boolean {
+    let atLeastOneChecked = false;
+
+    this.syncedDocument.pages.forEach((page) => {
+      if (page.applyMask) {
+        atLeastOneChecked = true;
+      }
+    });
+
+    return atLeastOneChecked;
   }
 
-  @Watch("syncedDocument.applyMask", { immediate: true })
-  onApplyMaskChanged(value: boolean, old: boolean): void {
+  onPageUpdated(): void {
+    this.syncedDocument.applyMask = this.atLeastOneChecked;
+  }
+
+  @Watch("syncedDocument.applyMask", { immediate: false })
+  onApplyMaskChanged(value: boolean): void {
     // If document has been unchecked
-    if (old && !value) {
+    if (!value) {
       this.syncedDocument.pages.forEach((page) => (page.applyMask = false));
     }
 
     // If document has been checked
-    if (!old && value) {
+    if (value && !this.atLeastOneChecked) {
       this.syncedDocument.pages.forEach((page) => (page.applyMask = true));
     }
   }

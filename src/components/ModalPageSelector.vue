@@ -7,15 +7,18 @@
 <script lang="ts">
 import { configurable } from "@/types/mask";
 import { Component, PropSync, Vue, Watch } from "vue-property-decorator";
+import { BFormCheckbox } from "bootstrap-vue";
 
-@Component
+@Component({ components: { BFormCheckbox } })
 export default class ModalPageSelector extends Vue {
   @PropSync("page", { type: Object, required: true })
   syncedPage!: configurable;
 
   @Watch("syncedPage.applyMask")
   onApplyMaskChanged(): void {
-    this.$emit("updated");
+    this.$nextTick(() => {
+      this.$emit("updated");
+    });
   }
 }
 </script>
