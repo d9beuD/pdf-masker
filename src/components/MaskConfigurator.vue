@@ -2,7 +2,12 @@
   <div class="shadow-sm border p-2 bg-light rounded-lg">
     <div class="mb-1 row no-gutters justify-content-between aling-items-center">
       <div class="col-auto small font-weight-bold">
-        Masque {{ syncedConfig.id }}
+        <b-form-input
+          class="border-0 bg-light h5 mb-0"
+          v-model="syncedConfig.id"
+          size="sm"
+          :debounce="debounce"
+        />
       </div>
       <div class="col-auto">
         <a

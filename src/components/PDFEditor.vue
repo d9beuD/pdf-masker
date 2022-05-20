@@ -203,7 +203,11 @@ export default class PDFEditor extends Vue {
   mounted(): void {
     this.counter = Math.max(
       0,
-      ...this.maskList.map((mask) => Number.parseInt(mask.id))
+      ...this.maskList.map((mask) => {
+        return Number.isInteger(Number.parseInt(mask.id))
+          ? Number.parseInt(mask.id)
+          : 0;
+      })
     );
   }
 
