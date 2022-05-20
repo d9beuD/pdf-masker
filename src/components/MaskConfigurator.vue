@@ -73,7 +73,7 @@
         </b-form-group>
       </div>
     </div>
-    <PageSelectorModal
+    <ModalMask
       :id="modalId"
       :documents="syncedConfig.documents"
       :maskName="syncedConfig.id"
@@ -91,7 +91,7 @@ import {
   faMemoCircleCheck,
   faMinusCircle,
 } from "@fortawesome/pro-duotone-svg-icons";
-import PageSelectorModal from "./PageSelectorModal.vue";
+import ModalMask from "./ModalMask.vue";
 import uid from "@/utils/uid";
 
 @Component({
@@ -99,7 +99,7 @@ import uid from "@/utils/uid";
     BFormGroup,
     BFormInput,
     FontAwesomeIcon,
-    PageSelectorModal,
+    ModalMask,
   },
   directives: {
     "b-modal": VBModal,

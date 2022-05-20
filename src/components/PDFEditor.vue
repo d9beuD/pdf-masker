@@ -51,7 +51,7 @@
                 v-for="(mask, index) in masks"
                 :key="mask.id"
                 :config.sync="masks[index]"
-                :documents="pdfDocList"
+                :documents.sync="pdfDocList"
                 @delete="removeMask"
               />
             </div>
